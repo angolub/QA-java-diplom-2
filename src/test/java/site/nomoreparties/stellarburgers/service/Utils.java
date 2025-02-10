@@ -9,7 +9,7 @@ public class Utils {
     private static final String USER_PASSWORD = "yandexRu";
     private static final String USER_NAME = "Иван Иванов";
 
-    public static final String ACCESS_TOKEN_POSTFIX = "Bearer ";
+    public static final String ACCESS_TOKEN_PREFIX = "Bearer ";
 
     private static String generateString(int size)
     {
@@ -37,6 +37,6 @@ public class Utils {
 
     public static String getAuthToken(UserResponse user){
         String accessToken  = user.getAccessToken();
-        return accessToken.substring(ACCESS_TOKEN_POSTFIX.length());
+        return accessToken.substring(ACCESS_TOKEN_PREFIX.length());
     }
 }

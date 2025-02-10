@@ -166,7 +166,7 @@ public class UserAPITest extends TestBase {
         Assert.assertTrue(userResponse.isSuccess());
         Assert.assertEquals(user.getEmail(), userResponse.getUser().getEmail());
         Assert.assertEquals(user.getName(), userResponse.getUser().getName());
-        assertThat(userResponse.getAccessToken(), startsWith(Utils.ACCESS_TOKEN_POSTFIX));
+        assertThat(userResponse.getAccessToken(), startsWith(Utils.ACCESS_TOKEN_PREFIX));
         Assert.assertNotNull(userResponse.getRefreshToken());
     }
 
