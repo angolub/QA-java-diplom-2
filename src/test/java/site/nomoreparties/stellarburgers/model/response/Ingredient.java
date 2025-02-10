@@ -1,4 +1,4 @@
-package site.nomoreparties.stellarburgers.model;
+package site.nomoreparties.stellarburgers.model.response;
 
 import com.google.gson.annotations.SerializedName;
 import lombok.AllArgsConstructor;

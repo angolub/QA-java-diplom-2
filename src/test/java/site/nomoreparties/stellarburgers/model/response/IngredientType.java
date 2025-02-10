@@ -1,4 +1,4 @@
-package site.nomoreparties.stellarburgers.model;
+package site.nomoreparties.stellarburgers.model.response;
 
 public enum IngredientType {
     bun,
