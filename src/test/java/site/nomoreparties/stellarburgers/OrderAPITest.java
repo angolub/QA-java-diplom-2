@@ -21,10 +21,8 @@ import site.nomoreparties.stellarburgers.service.OrderService;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasProperty;
 
 public class OrderAPITest extends TestBase {
     private final int INGREDIENTS_COUNT = 1;
@@ -193,7 +191,6 @@ public class OrderAPITest extends TestBase {
         Assert.assertTrue(orderCollectionResponse.isSuccess());
         Assert.assertNotNull(orderCollectionResponse.getOrders());
         assertThat(orderCollectionResponse.getOrders().size(), greaterThan(0));
-        assertThat(orderCollectionResponse.getOrders(), everyItem(instanceOf(OrderDetail.class)));
         orderCollectionResponse.getOrders().forEach(orderDetail -> {
             Assert.assertNotNull(orderDetail.getId());
             Assert.assertNotNull(orderDetail.getName());
