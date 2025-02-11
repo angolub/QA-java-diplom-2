@@ -4,6 +4,7 @@ import io.qameta.allure.Step;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.SoftAssertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -39,8 +40,14 @@ public abstract class TestBase {
 
     @Step("Check response with error message")
     public void checkErrorMessageResponse(String expectedMessage, MessageResponse messageResponse){
-        Assert.assertFalse(messageResponse.isSuccess());
-        Assert.assertEquals(expectedMessage, messageResponse.getMessage());
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(messageResponse.isSuccess())
+                    .as("Проверяем значение поля success")
+                    .isFalse();
+            softAssertions.assertThat(messageResponse.getMessage())
+                    .as("Проверяем значение текстового сообщения")
+                    .isEqualTo(expectedMessage);
+        });
     }
 
     protected UserResponse initUniqueUser() {

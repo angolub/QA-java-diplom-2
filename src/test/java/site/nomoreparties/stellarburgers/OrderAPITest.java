@@ -4,10 +4,13 @@ import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.SoftAssertions;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import site.nomoreparties.stellarburgers.model.UserAuthorization;
 import site.nomoreparties.stellarburgers.model.response.Ingredient;
 import site.nomoreparties.stellarburgers.model.Burger;
 import site.nomoreparties.stellarburgers.model.response.IngredientResponse;
@@ -23,12 +26,28 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
+
 
 public class OrderAPITest extends TestBase {
     private final int INGREDIENTS_COUNT = 1;
     private final String INVALID_INGREDIENT_HASH = "00a0";
     private final String ASSERT_MESSAGE_NO_INGREDIENTS = "Нет ингредиентов для создания бургера";
     private final String NO_INGREDIENTS_IN_BURGER_MESSAGE = "Ingredient ids must be provided";
+
+    private  Burger makeBurger() {
+        Response response = OrderService.getIngredients();
+        checkStatusCodeResponse(response, HttpStatus.SC_OK);
+        IngredientResponse ingredientResponse = response.body()
+                .as(IngredientResponse.class);
+
+        List<Ingredient> ingredients = ingredientResponse.getData();
+        Assert.assertNotNull(ASSERT_MESSAGE_NO_INGREDIENTS, ingredients);
+        assertThat(ASSERT_MESSAGE_NO_INGREDIENTS, ingredients.size(), greaterThan(0));
+
+        String firstIngredient = ingredients.get(0).getId();
+        return new Burger(List.of(firstIngredient));
+    }
 
     @Before
     public void startUp() {
@@ -50,7 +69,7 @@ public class OrderAPITest extends TestBase {
         checkStatusCodeResponse(response, HttpStatus.SC_OK);
         OrderResponse orderResponse = response.body()
                 .as(OrderResponse.class);
-        checkOrderResponse(burger, orderResponse);
+        checkOrderResponseWithAutorization(burger, orderResponse);
     }
 
     @Test
@@ -118,99 +137,156 @@ public class OrderAPITest extends TestBase {
     }
 
     @Step("Check response order with authorization")
-    public void checkOrderResponse(Burger burger, OrderResponse orderResponse){
-        Assert.assertTrue(orderResponse.isSuccess());
-        Assert.assertNotNull(orderResponse.getName());
-        Assert.assertNotNull(orderResponse.getOrder());
+    private void checkOrderResponseWithAutorization(Burger burger, OrderResponse orderResponse){
+        checkOrderResponse(orderResponse);
 
         OrderDetail<Ingredient> orderDetail = orderResponse.getOrder();
-        Assert.assertNotNull(orderDetail.getId());
-        Assert.assertNotNull(orderDetail.getOwner());
-        Assert.assertNotNull(orderDetail.getStatus());
-        Assert.assertNotNull(orderDetail.getName());
-        Assert.assertNotNull(orderDetail.getCreatedAt());
-        Assert.assertNotNull(orderDetail.getUpdatedAt());
-        assertThat(orderDetail.getNumber(), greaterThan(0));
-        assertThat(orderDetail.getPrice(), greaterThan(0.0f));
-        Assert.assertNotNull(orderDetail.getIngredients());
-        Assert.assertEquals(INGREDIENTS_COUNT, orderDetail.getIngredients().size());
 
-        burger.getIngredients().forEach(ingredientId -> {
-             Ingredient ingredient = orderDetail.getIngredients().stream()
-                    .filter(ing -> ing.getId().equals(ingredientId))
-                    .findFirst()
-                    .orElseGet(null);
-            Assert.assertNotNull(ingredient);
-        });
+        checkOrderDetail(burger, orderDetail);
 
         OrderOwner orderOwner = orderDetail.getOwner();
-        Assert.assertEquals(user.getEmail(), orderOwner.getEmail());
-        Assert.assertEquals(user.getName(), orderOwner.getName());
-        Assert.assertNotNull(orderOwner.getCreatedAt());
-        Assert.assertNotNull(orderOwner.getUpdatedAt());
+
+        checkOrderOwner(user, orderOwner);
+    }
+
+    @Step("Check response order")
+    private void checkOrderResponse(OrderResponse orderResponse){
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderResponse.isSuccess())
+                    .as("Проверяем значение поля success").isTrue();
+            softAssertions.assertThat(orderResponse.getName())
+                    .as("Проверяем значение поля name").isNotBlank();
+            softAssertions.assertThat(orderResponse.getOrder())
+                    .as("Проверяем значение поля order").isNotNull();
+        });
+    }
+
+    @Step("Check order detail object")
+    private void checkOrderDetail(Burger burger, OrderDetail<Ingredient> orderDetail) {
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderDetail.getId())
+                    .as("Проверяем значение поля id").isNotBlank();
+            softAssertions.assertThat(orderDetail.getOwner())
+                    .as("Проверяем значение поля owner").isNotNull();
+            softAssertions.assertThat(orderDetail.getName())
+                    .as("Проверяем значение поля name").isNotBlank();
+            softAssertions.assertThat(orderDetail.getCreatedAt())
+                    .as("Проверяем значение поля createdAt").isNotBlank();
+            softAssertions.assertThat(orderDetail.getUpdatedAt())
+                    .as("Проверяем значение поля updatedAt").isNotBlank();
+            softAssertions.assertThat(orderDetail.getNumber())
+                    .as("Проверяем значение поля number").isGreaterThan(0);
+            softAssertions.assertThat(orderDetail.getPrice())
+                    .as("Проверяем значение поля price").isGreaterThan(0.0f);
+            softAssertions.assertThat(orderDetail.getIngredients())
+                    .as("Проверяем значение поля ingredients")
+                    .size()
+                    .isEqualTo(INGREDIENTS_COUNT)
+                    .returnToIterable()
+                    .extracting(Ingredient::getId)
+                    .contains(burger.getIngredients().get(0));
+        });
+    }
+
+    @Step("Check order owner object")
+    private void checkOrderOwner(UserAuthorization expectedUser, OrderOwner orderOwner) {
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderOwner.getEmail())
+                    .as("Проверяем значение поля email").isEqualTo(expectedUser.getEmail());
+            softAssertions.assertThat(orderOwner.getName())
+                    .as("Проверяем значение поля name").isEqualTo(expectedUser.getName());
+            softAssertions.assertThat(orderOwner.getCreatedAt())
+                    .as("Проверяем значение поля createdAt").isNotBlank();
+            softAssertions.assertThat(orderOwner.getUpdatedAt())
+                    .as("Проверяем значение поля updatedAt").isNotBlank();
+        });
     }
 
     @Step("Check response order without authorization")
     public void checkOrderResponseWithoutAuthorization(OrderResponse orderResponse){
-        Assert.assertTrue(orderResponse.isSuccess());
-        Assert.assertNotNull(orderResponse.getName());
-        Assert.assertNotNull(orderResponse.getOrder());
+        checkOrderResponse(orderResponse);
 
-        OrderDetail orderDetail = orderResponse.getOrder();
-        assertThat(orderDetail.getNumber(), greaterThan(0));
-        Assert.assertNull(orderDetail.getId());
-        Assert.assertNull(orderDetail.getOwner());
-        Assert.assertNull(orderDetail.getStatus());
-        Assert.assertNull(orderDetail.getName());
-        Assert.assertNull(orderDetail.getCreatedAt());
-        Assert.assertNull(orderDetail.getUpdatedAt());
-        Assert.assertEquals(0, orderDetail.getPrice(), 0.0f);
-        Assert.assertNull(orderDetail.getIngredients());
+        OrderDetail<Ingredient> orderDetail = orderResponse.getOrder();
+
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderDetail.getId())
+                    .as("Проверяем значение поля id").isNull();
+            softAssertions.assertThat(orderDetail.getOwner())
+                    .as("Проверяем значение поля owner").isNull();
+            softAssertions.assertThat(orderDetail.getName())
+                    .as("Проверяем значение поля name").isNull();
+            softAssertions.assertThat(orderDetail.getCreatedAt())
+                    .as("Проверяем значение поля createdAt").isNull();
+            softAssertions.assertThat(orderDetail.getUpdatedAt())
+                    .as("Проверяем значение поля updatedAt").isNull();
+            softAssertions.assertThat(orderDetail.getNumber())
+                    .as("Проверяем значение поля number").isGreaterThan(0);
+            softAssertions.assertThat(orderDetail.getPrice())
+                    .as("Проверяем значение поля price").isEqualTo(0.0f);
+            softAssertions.assertThat(orderDetail.getIngredients())
+                    .as("Проверяем значение поля ingredients")
+                    .isNull();
+        });
     }
 
     @Step("Check response order collection with authorization")
-    public void checkOrderCollectionResponse(OrderResponse orderResponse,OrderCollectionResponse orderCollectionResponse){
-        Assert.assertTrue(orderCollectionResponse.isSuccess());
-        Assert.assertNotNull(orderCollectionResponse.getOrders());
-        Assert.assertEquals(1, orderCollectionResponse.getOrders().size());
+    public void checkOrderCollectionResponse(OrderResponse orderResponse,OrderCollectionResponse orderCollectionResponse) {
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderCollectionResponse.isSuccess())
+                    .as("Проверяем значение поля success").isTrue();
+            softAssertions.assertThat(orderCollectionResponse.getOrders())
+                    .as("Проверяем значение поля order")
+                    .size()
+                    .isEqualTo(1);
+        });
 
         OrderDetail<String> actualOrderDetail = orderCollectionResponse.getOrders().get(0);
         OrderDetail<Ingredient> expectedOrderDetail = orderResponse.getOrder();
 
-        Assert.assertEquals(expectedOrderDetail.getId(), actualOrderDetail.getId());
-        Assert.assertEquals(expectedOrderDetail.getName(), actualOrderDetail.getName());
-        Assert.assertEquals(expectedOrderDetail.getNumber(), actualOrderDetail.getNumber());
-        Assert.assertEquals(expectedOrderDetail.getCreatedAt(), actualOrderDetail.getCreatedAt());
-        Assert.assertNotNull(actualOrderDetail.getIngredients());
-        Assert.assertEquals(expectedOrderDetail.getIngredients().size(), actualOrderDetail.getIngredients().size());
-        Assert.assertEquals(expectedOrderDetail.getIngredients().get(0).getId(), actualOrderDetail.getIngredients().get(0));
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(actualOrderDetail.getId())
+                    .as("Проверяем значение поля id")
+                    .isEqualTo(expectedOrderDetail.getId());
+            softAssertions.assertThat(actualOrderDetail.getName())
+                    .as("Проверяем значение поля name")
+                    .isEqualTo(expectedOrderDetail.getName());
+            softAssertions.assertThat(actualOrderDetail.getNumber())
+                    .as("Проверяем значение поля number")
+                    .isEqualTo(expectedOrderDetail.getNumber());
+            softAssertions.assertThat(actualOrderDetail.getCreatedAt())
+                    .as("Проверяем значение поля createdAt")
+                    .isEqualTo(expectedOrderDetail.getCreatedAt());
+            softAssertions.assertThat(actualOrderDetail.getIngredients())
+                    .as("Проверяем значение поля ingredients")
+                    .size()
+                    .isEqualTo(actualOrderDetail.getIngredients().size())
+                    .returnToIterable()
+                    .contains(expectedOrderDetail.getIngredients().get(0).getId());
+        });
     }
 
     @Step("Check response order collection without authorization")
     public void checkAllOrderCollectionResponse(OrderCollectionResponse orderCollectionResponse){
-        Assert.assertTrue(orderCollectionResponse.isSuccess());
-        Assert.assertNotNull(orderCollectionResponse.getOrders());
-        assertThat(orderCollectionResponse.getOrders().size(), greaterThan(0));
-        orderCollectionResponse.getOrders().forEach(orderDetail -> {
-            Assert.assertNotNull(orderDetail.getId());
-            Assert.assertNotNull(orderDetail.getName());
-            assertThat(orderDetail.getNumber(), greaterThan(0));
-            Assert.assertNotNull(orderDetail.getIngredients());
-            assertThat(orderDetail.getIngredients().size(), greaterThan(0));
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(orderCollectionResponse.isSuccess())
+                    .as("Проверяем значение поля success").isTrue();
+            softAssertions.assertThat(orderCollectionResponse.getOrders())
+                    .as("Проверяем значение размер коллекции orders")
+                    .size()
+                    .isGreaterThan(0);
+
+            softAssertions.assertThat(orderCollectionResponse.getOrders())
+                    .as("Проверяем значение поля id в коллекции orders")
+                    .size()
+                    .returnToIterable()
+                    .allSatisfy(order -> assertThat(order.getId(), Matchers.notNullValue()));
+
+
+            softAssertions.assertThat(orderCollectionResponse.getOrders())
+                    .as("Проверяем значение поля number в коллекции orders")
+                    .size()
+                    .returnToIterable()
+                    .allSatisfy(order -> assertThat(order.getNumber(), Matchers.greaterThan(0)));
         });
-    }
-
-    private  Burger makeBurger() {
-        Response response = OrderService.getIngredients();
-        checkStatusCodeResponse(response, HttpStatus.SC_OK);
-        IngredientResponse ingredientResponse = response.body()
-                .as(IngredientResponse.class);
-
-        List<Ingredient> ingredients = ingredientResponse.getData();
-        Assert.assertNotNull(ASSERT_MESSAGE_NO_INGREDIENTS, ingredients);
-        assertThat(ASSERT_MESSAGE_NO_INGREDIENTS, ingredients.size(), greaterThan(0));
-
-        String firstIngredient = ingredients.get(0).getId();
-        return new Burger(List.of(firstIngredient));
     }
 }

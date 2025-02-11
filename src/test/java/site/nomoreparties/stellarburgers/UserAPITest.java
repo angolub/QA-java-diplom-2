@@ -3,6 +3,7 @@ import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.SoftAssertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,7 +38,7 @@ public class UserAPITest extends TestBase {
     @DisplayName("Test user registration (positive testcase)")
     public void registerUniqueUserTest() {
         UserResponse userResponse = initUniqueUser();
-        checkUserResponse(userResponse);
+        checkUserResponse(user, userResponse);
     }
 
     @Test
@@ -99,7 +100,7 @@ public class UserAPITest extends TestBase {
     public void loginUserPositiveTest() {
         initUniqueUser();
         UserResponse userResponse = loginUser();
-        checkUserResponse(userResponse);
+        checkUserResponse(user, userResponse);
     }
 
     @Test
@@ -139,7 +140,7 @@ public class UserAPITest extends TestBase {
 
         UserResponse userResponse = response.body()
                 .as(UserResponse.class);
-        checkUpdateUserResponse(userResponse);
+        checkUpdateUserResponse(user, userResponse);
 
         loginUser();
     }
@@ -162,19 +163,50 @@ public class UserAPITest extends TestBase {
     }
 
     @Step("Check response user")
-    public void checkUserResponse(UserResponse userResponse){
-        Assert.assertTrue(userResponse.isSuccess());
-        Assert.assertEquals(user.getEmail(), userResponse.getUser().getEmail());
-        Assert.assertEquals(user.getName(), userResponse.getUser().getName());
-        assertThat(userResponse.getAccessToken(), startsWith(Utils.ACCESS_TOKEN_PREFIX));
-        Assert.assertNotNull(userResponse.getRefreshToken());
+    public void checkUserResponse(UserAuthorization expectedUser, UserResponse userResponse){
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(userResponse.isSuccess())
+                    .as("Проверяем значение поля success").isTrue();
+            softAssertions.assertThat(userResponse.getUser())
+                    .as("Проверяем значение поля user").isNotNull();
+            softAssertions.assertThat(userResponse.getAccessToken())
+                    .as("Проверяем значение поля access token")
+                    .isNotBlank()
+                    .startsWith(Utils.ACCESS_TOKEN_PREFIX);
+            softAssertions.assertThat(userResponse.getRefreshToken())
+                    .as("Проверяем значение поля refresh token")
+                    .isNotBlank();
+        });
+
+        UserAuthorization userAuthorization = userResponse.getUser();
+
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(userAuthorization.getEmail())
+                    .as("Проверяем значение поля email").isEqualTo(expectedUser.getEmail());
+            softAssertions.assertThat(userAuthorization.getName())
+                    .as("Проверяем значение поля name").isEqualTo(expectedUser.getName());
+
+        });
     }
 
     @Step("Check response update user")
-    public void checkUpdateUserResponse(UserResponse userResponse){
-        Assert.assertTrue(userResponse.isSuccess());
-        Assert.assertEquals(user.getEmail(), userResponse.getUser().getEmail());
-        Assert.assertEquals(user.getName(), userResponse.getUser().getName());
+    public void checkUpdateUserResponse(UserAuthorization expectedUser, UserResponse userResponse){
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(userResponse.isSuccess())
+                    .as("Проверяем значение поля success").isTrue();
+            softAssertions.assertThat(userResponse.getUser())
+                    .as("Проверяем значение поля user").isNotNull();
+        });
+
+        UserAuthorization userAuthorization = userResponse.getUser();
+
+        SoftAssertions.assertSoftly(softAssertions -> {
+            softAssertions.assertThat(userAuthorization.getEmail())
+                    .as("Проверяем значение поля email").isEqualTo(expectedUser.getEmail());
+            softAssertions.assertThat(userAuthorization.getName())
+                    .as("Проверяем значение поля name").isEqualTo(expectedUser.getName());
+
+        });
     }
 
     private UserResponse loginUser() {
