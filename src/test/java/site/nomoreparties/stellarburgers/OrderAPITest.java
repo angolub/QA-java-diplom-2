@@ -6,9 +6,7 @@ import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.assertj.core.api.SoftAssertions;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import site.nomoreparties.stellarburgers.model.UserAuthorization;
 import site.nomoreparties.stellarburgers.model.response.Ingredient;
@@ -26,7 +24,6 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.lessThan;
 
 
 public class OrderAPITest extends TestBase {
@@ -47,16 +44,6 @@ public class OrderAPITest extends TestBase {
 
         String firstIngredient = ingredients.get(0).getId();
         return new Burger(List.of(firstIngredient));
-    }
-
-    @Before
-    public void startUp() {
-        super.startUp();
-    }
-
-    @After
-    public void tearDown() {
-        super.tearDown();
     }
 
     @Test

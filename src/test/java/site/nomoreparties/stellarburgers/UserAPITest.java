@@ -4,9 +4,6 @@ import io.qameta.allure.junit4.DisplayName;
 import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.assertj.core.api.SoftAssertions;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import site.nomoreparties.stellarburgers.model.UserAuthorization;
 import site.nomoreparties.stellarburgers.model.response.MessageResponse;
@@ -14,25 +11,12 @@ import site.nomoreparties.stellarburgers.model.response.UserResponse;
 import site.nomoreparties.stellarburgers.service.UserService;
 import site.nomoreparties.stellarburgers.service.Utils;
 
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
-
-public class UserAPITest extends TestBase {
+public classUserAPITest extends TestBase {
 
     private final String DUBLICATE_USER_MESSAGE = "User already exists";
     private final String NO_REQUIRED_USER_FIELDS_MESSAGE = "Email, password and name are required fields";
     private final String EMAIL_PASSWORD_INCORRECT_MESSAGE = "email or password are incorrect";
     private final String NOT_AUTHORISED_USER_MESSAGE = "You should be authorised";
-
-    @Before
-    public void startUp() {
-        super.startUp();
-    }
-
-    @After
-    public void tearDown() {
-        super.tearDown();
-    }
 
     @Test
     @DisplayName("Test user registration (positive testcase)")

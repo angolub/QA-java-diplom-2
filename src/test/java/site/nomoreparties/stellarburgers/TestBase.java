@@ -6,7 +6,6 @@ import io.restassured.response.Response;
 import org.apache.http.HttpStatus;
 import org.assertj.core.api.SoftAssertions;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import site.nomoreparties.stellarburgers.model.UserAuthorization;
 import site.nomoreparties.stellarburgers.model.response.MessageResponse;
