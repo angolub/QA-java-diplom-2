@@ -11,7 +11,7 @@ import site.nomoreparties.stellarburgers.model.response.UserResponse;
 import site.nomoreparties.stellarburgers.service.UserService;
 import site.nomoreparties.stellarburgers.service.Utils;
 
-public classUserAPITest extends TestBase {
+public class UserAPITest extends TestBase {
 
     private final String DUBLICATE_USER_MESSAGE = "User already exists";
     private final String NO_REQUIRED_USER_FIELDS_MESSAGE = "Email, password and name are required fields";
